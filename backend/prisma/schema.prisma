@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+enum LicenseType {
+  TRIAL_7_DAYS
+  SIX_MONTHS
+  TWELVE_MONTHS
+  LIFETIME
+}
+
+enum ActivationPlan {
+  TRIAL_7_DAYS
+  SIX_MONTHS
+  TWELVE_MONTHS
+  LIFETIME
+}
+
+enum ActivationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+enum TableStatus {
+  FREE
+  OCCUPIED
+  RESERVED
+  CLEANING
+}
+
+enum ProductType {
+  FOOD
+  DRINK
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  PAID
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  MIXED
+}
+
+// ===== MODELS =====
+
+model Business {
+  id                  String      @id @default(uuid())
+  businessCode        Int         @unique @default(autoincrement())
+  name                String
+  address             String?
+  phone               String?
+  email               String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  taxId               String?     @unique
+  configCompleted     Boolean     @default(false)
+  currency            String      @default("DOP")
+  rnc                 String?
+  bankName            String?
+  bankAccountNumber   String?
+  bankAccountType     String?
+  taxRate             Decimal     @default(18.0) @db.Decimal(5, 2)
+  tipRate             Decimal     @default(10.0) @db.Decimal(5, 2)
+  auditLogs           AuditLog[]
+  cashShifts          CashShift[]
+  categories          Category[]
+  expenses            Expense[]
+  inventories         Inventory[]
+  licenses            License[]
+  orders              Order[]
+  payments            Payment[]
+  products            Product[]
+  tables              Table[]
+  users               User[]
+  activationRequests  ActivationRequest[]
+
+  @@map("businesses")
+}
+
+model ActivationRequest {
+  id            String            @id @default(uuid())
+  businessCode  Int?
+  businessName  String
+  rnc           String?
+  businessType  String?
+  adminName     String
+  adminEmail    String
+  phone         String?
+  city          String?
+  country       String?
+  plan          ActivationPlan
+  status        ActivationStatus @default(PENDING)
+  licenseKey    String?
+  businessId    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  business      Business?         @relation(fields: [businessId], references: [id])
+
+  @@map("activation_requests")
+}
+
+model License {
+  id          String        @id @default(uuid())
+  key         String        @unique
+  businessId  String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  startDate   DateTime
+  endDate     DateTime
+  type        LicenseType
+  status      LicenseStatus @default(ACTIVE)
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("licenses")
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  permissions Json
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id             String      @id @default(uuid())
+  name           String
+  email          String
+  password       String
+  pin            String      @db.Char(4)
+  avatar         String?
+  businessId     String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  isActive       Boolean     @default(true)
+  lastLogin      DateTime?
+  roleId         String
+  auditLogs      AuditLog[]
+  cashShifts     CashShift[]
+  orderLogs      OrderLog[]
+  orders         Order[]
+  reservedTables Table[]     @relation("TableReservedBy")
+  business       Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  role           Role        @relation(fields: [roleId], references: [id])
+
+  @@unique([businessId, email])
+  @@map("users")
+}
+
+model Category {
+  id         String      @id @default(uuid())
+  name       String
+  color      String?
+  icon       String?
+  businessId String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  isActive   Boolean     @default(true)
+  sortOrder  Int         @default(0)
+  type       ProductType
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  products   Product[]
+
+  @@unique([businessId, name, type])
+  @@map("categories")
+}
+
+model Product {
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  code         String?
+  price        Decimal       @db.Decimal(10, 2)
+  cost         Decimal?      @db.Decimal(10, 2)
+  image        String?
+  businessId   String
+  categoryId   String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  hasStock     Boolean       @default(false)
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  type         ProductType
+  isIngredient Boolean       @default(false)
+  unit         String?       @default("UNIDAD")
+  inventory    Inventory?
+  orderItems   OrderItem[]
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  usedIn       Recipe[]      @relation("IngredientRecipe")
+  recipes      Recipe[]      @relation("ProductRecipe")
+
+  @@unique([businessId, code])
+  @@map("products")
+}
+
+model Recipe {
+  id           String   @id @default(uuid())
+  businessId   String
+  productId    String
+  ingredientId String
+  quantity     Decimal  @db.Decimal(10, 3)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  ingredient   Product  @relation("IngredientRecipe", fields: [ingredientId], references: [id], onDelete: Cascade)
+  product      Product  @relation("ProductRecipe", fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@map("recipes")
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  businessId    String
+  tableId       String
+  userId        String
+  status        OrderStatus @default(PENDING)
+  subtotal      Decimal     @default(0) @db.Decimal(10, 2)
+  tax           Decimal     @default(0) @db.Decimal(10, 2)
+  discount      Decimal     @default(0) @db.Decimal(10, 2)
+  total         Decimal     @default(0) @db.Decimal(10, 2)
+  paidAmount    Decimal     @default(0) @db.Decimal(10, 2)
+  notes         String?
+  customerName  String?
+  customerCount Int         @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  sentAt        DateTime?
+  paidAt        DateTime?
+  servedAt      DateTime?
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  table         Table       @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  orderLogs     OrderLog[]
+  payments      Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String          @id @default(uuid())
+  orderId        String
+  productId      String
+  quantity       Int             @default(1)
+  price          Decimal         @db.Decimal(10, 2)
+  subtotal       Decimal         @db.Decimal(10, 2)
+  status         OrderItemStatus @default(PENDING)
+  notes          String?
+  sentToKitchen  Boolean         @default(false)
+  sentToBar      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model OrderLog {
+  id        String   @id @default(uuid())
+  orderId   String
+  userId    String?
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("order_logs")
+}
+
+model Payment {
+  id         String        @id @default(uuid())
+  orderId    String
+  businessId String
+  amount     Decimal       @db.Decimal(10, 2)
+  method     PaymentMethod @default(CASH)
+  status     String        @default("COMPLETED")
+  reference  String?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  order      Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  business   Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Table {
+  id           String      @id @default(uuid())
+  businessId   String
+  tableNumber  Int
+  capacity     Int
+  status       TableStatus @default(FREE)
+  reservedById String?
+  pin          String      @db.Char(4)
+  isActive     Boolean     @default(true)
+  xPosition    Int         @default(0)
+  yPosition    Int         @default(0)
+  orientation  String      @default("horizontal")
+  shape        String      @default("rectangular")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reservedBy   User?       @relation("TableReservedBy", fields: [reservedById], references: [id])
+  orders       Order[]
+
+  @@unique([businessId, tableNumber])
+  @@map("tables")
+}
+
+model CashShift {
+  id             String   @id @default(uuid())
+  businessId     String
+  userId         String
+  openingBalance Decimal  @db.Decimal(10, 2)
+  closingBalance Decimal? @db.Decimal(10, 2)
+  totalSales     Decimal  @default(0) @db.Decimal(10, 2)
+  totalExpenses  Decimal  @default(0) @db.Decimal(10, 2)
+  notes          String?
+  isOpen         Boolean  @default(true)
+  openedAt       DateTime @default(now())
+  closedAt       DateTime?
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cash_shifts")
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  businessId  String
+  description String
+  amount      Decimal  @db.Decimal(10, 2)
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+model Inventory {
+  id         String   @id @default(uuid())
+  businessId String
+  productId  String   @unique
+  quantity   Int      @default(0)
+  minStock   Int      @default(10)
+  lastUpdate DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("inventory")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  businessId String
+  userId     String?
+  action     String
+  resource   String?
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model GlobalSetting {
+  id                   Int      @id @default(autoincrement())
+  landingBackgroundUrl String?
+  contactName          String?
+  contactEmail         String?
+  contactPhone         String?
+  contactWhatsapp      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("global_settings")
+}

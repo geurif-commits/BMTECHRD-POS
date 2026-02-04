@@ -1,0 +1,18 @@
+.color-preview {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 0.5rem;
+  border: 2px solid rgb(226, 232, 240);
+}
+
+.color-preview-primary {
+  background-color: inherit;
+}
+
+.color-preview-secondary {
+  background-color: inherit;
+}
+
+.color-preview-accent {
+  background-color: inherit;
+}

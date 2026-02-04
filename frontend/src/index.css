@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --landing-bg: none;
+}
+
+.landing-bg {
+  background-image: var(--landing-bg);
+  background-size: cover;
+  background-position: center;
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+    touch-action: manipulation;
+  }
+  
+  /* Mejoras para pantallas táctiles */
+  button, 
+  [role="button"] {
+    @apply select-none;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Scrollbar personalizada */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-500 text-white font-semibold py-3 px-6 rounded-lg
+           hover:bg-primary-600 active:bg-primary-700 
+           transition-colors duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-lg
+           hover:bg-gray-300 active:bg-gray-400
+           transition-colors duration-200;
+  }
+  
+  .btn-danger {
+    @apply bg-red-500 text-white font-semibold py-3 px-6 rounded-lg
+           hover:bg-red-600 active:bg-red-700
+           transition-colors duration-200;
+  }
+  
+  .btn-success {
+    @apply bg-green-500 text-white font-semibold py-3 px-6 rounded-lg
+           hover:bg-green-600 active:bg-green-700
+           transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200
+           hover:shadow-md transition-shadow duration-200;
+  }
+  
+  .input-primary {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           transition-all duration-200;
+  }
+  
+  .table-status-free {
+    @apply bg-green-100 text-green-800 border-green-200;
+  }
+  
+  .table-status-occupied {
+    @apply bg-red-100 text-red-800 border-red-200;
+  }
+  
+  .table-status-reserved {
+    @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+  }
+  
+  .order-status-pending {
+    @apply bg-orange-100 text-orange-800;
+  }
+  
+  .order-status-preparing {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  .order-status-ready {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .order-status-served {
+    @apply bg-purple-100 text-purple-800;
+  }
+  
+  .order-status-paid {
+    @apply bg-gray-100 text-gray-800;
+  }
+}
+
+/* Animaciones personalizadas */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Efectos para notificaciones */
+.notification-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
